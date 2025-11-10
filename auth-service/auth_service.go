@@ -6,20 +6,24 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
-type SıgnInRequest struct {
+type SignInRequest struct {
 	Username string `json:"username"`
 }
-type SıgnUpRequest struct {
+type SignUpRequest struct {
 	Username string `json:"username"`
 }
 type SignInResponse struct {
-	Message string `json:"messasge"`
+	Message string `json:"message"`
+	UserID  string `json:"user_id,omitempty"` // Oturum açtıktan sonra verilecek ID
 }
 type SignUpResponse struct {
 	Message string `json:"messasge"`
 }
+
+const SessionCookieName = "session_id"
 
 // -------------------HANDLERS-------------------//
 func HelloHandler(w http.ResponseWriter, r *http.Request) {
@@ -33,26 +37,42 @@ func HelloHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func SignInHandler(w http.ResponseWriter, r *http.Request) {
-	// Placeholder for sign-in logic
+	// ... (Metot ve JSON çözümleme kontrolleri)
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	var req SıgnInRequest
+	var req SignInRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
+	// ... (Hata kontrolleri)
+	if err != nil || req.Username == "" {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
-	if req.Username == "" {
-		http.Error(w, "Username is required", http.StatusBadRequest)
-		return
-	}
-	message := fmt.Sprintf("User %s signed in successfully", req.Username)
+
+	// 1. Simüle Edilmiş Kullanıcı ID'si Oluşturma
+	// Gerçekte bu, JWT oluşturma veya veritabanından ID alma adımıdır.
+	// Örnek: Kullanıcı adının sonuna statik bir ID ekleyelim.
+	simulatedUserID := fmt.Sprintf("%s_%d", req.Username, time.Now().Unix()%100) // Örneğin: "ali_45"
+	http.SetCookie(w, &http.Cookie{
+		Name:     SessionCookieName,
+		Value:    simulatedUserID,
+		Expires:  time.Now().Add(24 * time.Hour), // 24 saat geçerlilik süresi
+		HttpOnly: true,                           // Çok önemli güvenlik ayarı!
+		Secure:   false,                          // Test ortamı için false, prod için true olmalı!
+		Path:     "/",                            // Tüm yollar için geçerli
+	})
+	// 2. Başarılı Yanıtı Oluşturma
+	message := fmt.Sprintf("User %s signed in successfully. Use ID: %s", req.Username, simulatedUserID)
+
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(SignInResponse{Message: message})
 
+	// Yanıt struct'ını kullanarak ID'yi dahil et
+	json.NewEncoder(w).Encode(SignInResponse{
+		Message: message,
+		UserID:  simulatedUserID, // Bu ID istemciye gidiyor!
+	})
 }
 func SignUpHandler(w http.ResponseWriter, r *http.Request) {
 	// Placeholder for sign-in logic
@@ -60,7 +80,7 @@ func SignUpHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	var req SıgnUpRequest
+	var req SignUpRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
@@ -84,11 +104,11 @@ func main() {
 
 	apiKey := os.Getenv("API_KEY")
 	if apiKey == "" {
-		log.Fatal("API_KEY environment variable is required")
+		log.Println("API_KEY environment variable is required")
 	}
-	mux.HandleFunc("/signin", corsMiddleware(SignInHandler))
-	mux.HandleFunc("/signup", corsMiddleware(SignUpHandler))
-	mux.HandleFunc("/hello", corsMiddleware(HelloHandler))
+	mux.HandleFunc("/signin", corsMiddleware(apiKeyMiddleware(SignInHandler)))
+	mux.HandleFunc("/signup", corsMiddleware(apiKeyMiddleware(SignUpHandler)))
+	mux.HandleFunc("/hello", corsMiddleware(apiKeyMiddleware(HelloHandler)))
 	port := ":8080"
 	log.Printf("Auth Service is running  http://localhost%s", port)
 

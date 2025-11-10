@@ -92,7 +92,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/hello", corsMiddleware(apiKeyMiddleware(HelloHandler)))
-	mux.HandleFunc("/users", corsMiddleware(apiKeyMiddleware(UsersHandler)))
+	mux.HandleFunc("/list", corsMiddleware(apiKeyMiddleware(UsersHandler)))
 	// mux.HandleFunc("/health", corsMiddleware(apiKeyMiddleware(HealthHandler)))
 
 	// Port ayarı

@@ -8,11 +8,11 @@ import (
 // Middleware'ler
 func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Sadece belirli origin'lere izin ver
+
 		allowedOrigins := []string{
 			"https://your-frontend.com",
 			"http://localhost:3000",
-			"http://auth-service:8080", // Auth servisinden gelen isteklere izin ver
+			"http://auth-service:8080",
 		}
 
 		origin := r.Header.Get("Origin")
@@ -33,7 +33,6 @@ func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key, Authorization")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 
-		// Preflight isteklerini handle et
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
@@ -47,8 +46,8 @@ func apiKeyMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		expectedAPIKey := os.Getenv("USER_SERVICE_API_KEY")
 		if expectedAPIKey == "" {
-			// Development ortamı için default key
-			expectedAPIKey = "user-service-secret-key"
+
+			expectedAPIKey = "gateway-secret-key"
 		}
 
 		apiKey := r.Header.Get("X-API-Key")
